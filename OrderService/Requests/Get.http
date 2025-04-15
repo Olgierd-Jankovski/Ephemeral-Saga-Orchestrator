@@ -1,0 +1,9 @@
+@host=http://localhost:5063
+
+GET {{host}}/Order
+Content-Type: application/json
+
+# {
+#      "itemName": "Test Item"
+# }
+

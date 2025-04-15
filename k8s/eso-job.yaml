@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ephemeral-saga-job
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: ephemeral-saga
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: eso
+        image: eso-orchestrator:1.0
+        imagePullPolicy: IfNotPresent
+        args: ["abc123"]
+        env:
+        - name: ConnectionStrings__EsoDb
+          value: "Host=eso-db-service;Port=5432;Database=EsoDb;Username=postgres;Password=admin"
+        - name: ORDER_SERVICE_URL
+          value: "http://order-service"
+        - name: PAYMENT_SERVICE_URL
+          value: "http://payment-service"
+        - name: SHIPPING_SERVICE_URL
+          value: "http://shipping-service"
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"

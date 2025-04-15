@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eso-db-deployment
+  labels:
+    app: eso-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eso-db
+  template:
+    metadata:
+      labels:
+        app: eso-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:latest
+        env:
+          - name: POSTGRES_USER
+            value: "postgres"
+          - name: POSTGRES_PASSWORD
+            value: "admin"
+          - name: POSTGRES_DB
+            value: "EsoDb"
+        ports:
+        - containerPort: 5432
