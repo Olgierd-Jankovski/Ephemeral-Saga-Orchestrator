@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chaos-kill-eso
+  namespace: default
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: chaos-kill-eso
+    spec:
+      serviceAccountName: saga-gateway-sa  # Ensure this SA has permissions to delete pods labeled "app=eso"
+      restartPolicy: Never
+      containers:
+      - name: chaos-kill
+        image: bitnami/kubectl:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Starting chaos kill for ESO pods..."
+            while true; do
+              kubectl get pods -l app=eso -o name | head -n 2 | xargs kubectl delete --force --grace-period=0 || true
+              sleep 10
+            done

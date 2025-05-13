@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outbox-db-deployment
+  labels:
+    app: outbox-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: outbox-db
+  template:
+    metadata:
+      labels:
+        app: outbox-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:latest
+        env:
+          - name: POSTGRES_USER
+            value: "postgres"
+          - name: POSTGRES_PASSWORD
+            value: "admin"
+          - name: POSTGRES_DB
+            value: "outboxDb"
+        ports:
+        - containerPort: 5432

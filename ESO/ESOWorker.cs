@@ -31,24 +31,20 @@ public class EsoWorker
             return;
         }
 
-        // 2) Step "AuthorizePayment"
-        bool step2Ok = await ExecuteStepAsync(
-            sagaId, "AuthorizePayment",
-            () => AuthorizePayment(sagaId));
-        if (!step2Ok)
+        if (new Random().Next(1, 10) == 1)
         {
-            Console.WriteLine("[ESO] Payment step failed => compensating previous step(s)...");
-            await CompensateAllAsync(sagaId);
-            return;
+            // exception simulation, job scheduled, we throw
+            Console.WriteLine("[ESO] Simulating exception in CreateInventory step.");
+            throw new Exception("Simulated exception in CreateInventory step.");
         }
 
-        // 3) Step "PrepareShipping"
-        bool step3Ok = await ExecuteStepAsync(
-            sagaId, "PrepareShipping",
-            () => PrepareShipping(sagaId));
-        if (!step3Ok)
+        // 2) Step "CreateInventory"
+        bool step2Ok = await ExecuteStepAsync(
+            sagaId, "CreateInventory",
+            () => CreateInventory(sagaId));
+        if (!step2Ok)
         {
-            Console.WriteLine("[ESO] Shipping failed => undo Payment & Order");
+            Console.WriteLine("[ESO] Inventory step failed => compensating previous step(s)...");
             await CompensateAllAsync(sagaId);
             return;
         }
@@ -63,7 +59,7 @@ public class EsoWorker
         var existingStep = await _db.SagaStates
             .FirstOrDefaultAsync(x => x.SagaId == sagaId && x.StepName == stepName);
 
-        if (existingStep != null && existingStep.Status == "Success")
+        if (existingStep != null && existingStep.Status == "DONE")
         {
             Console.WriteLine($"[ESO] Step '{stepName}' already succeeded. Skipping.");
             return true;
@@ -76,14 +72,14 @@ public class EsoWorker
             {
                 SagaId = sagaId,
                 StepName = stepName,
-                Status = "Pending",
+                Status = "IN_PROGRESS",
                 CreatedAt = DateTime.UtcNow
             };
             _db.SagaStates.Add(existingStep);
         }
         else
         {
-            existingStep.Status = "Pending";
+            existingStep.Status = "IN_PROGRESS";
             existingStep.UpdatedAt = DateTime.UtcNow;
         }
         await _db.SaveChangesAsync();
@@ -92,14 +88,14 @@ public class EsoWorker
         var success = await action();
         if (success)
         {
-            existingStep.Status = "Success";
+            existingStep.Status = "DONE";
             existingStep.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             return true;
         }
         else
         {
-            existingStep.Status = "Failed";
+            existingStep.Status = "FAILED";
             existingStep.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             return false;
@@ -122,32 +118,17 @@ public class EsoWorker
         }
     }
 
-    private async Task<bool> AuthorizePayment(string sagaId)
+    private async Task<bool> CreateInventory(string sagaId)
     {
         try
         {
-            var response = await _httpClient.PostAsync("http://payment-service/Payment",
-                new StringContent($"{{\"sagaId\": \"{sagaId}\", \"amount\": 999}}", Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PostAsync("http://inventory-service/Inventory",
+                new StringContent($"{{\"sagaId\": \"{sagaId}\", \"itemName\": \"item name\"}}", Encoding.UTF8, "application/json"));
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
-            Console.WriteLine("[ESO] AuthorizePayment ex => " + ex.Message);
-            return false;
-        }
-    }
-
-    private async Task<bool> PrepareShipping(string sagaId)
-    {
-        try
-        {
-            var response = await _httpClient.PostAsync("http://shipping-service/Shipping",
-                new StringContent($"{{\"sagaId\": \"{sagaId}\"}}", Encoding.UTF8, "application/json"));
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[ESO] PrepareShipping ex => " + ex.Message);
+            Console.WriteLine("[ESO] CreateInventory ex => " + ex.Message);
             return false;
         }
     }
@@ -155,10 +136,9 @@ public class EsoWorker
     // ====== Kompensacija ======
     private async Task CompensateAllAsync(string sagaId)
     {
-        return;
         // Surandame step'us, kurie Success
         var successSteps = await _db.SagaStates
-            .Where(x => x.SagaId == sagaId && x.Status == "Success")
+            .Where(x => x.SagaId == sagaId && x.Status == "DONE")
             .OrderByDescending(x => x.Id)  // kad kompensuotume atvirkštine tvarka
             .ToListAsync();
 
@@ -167,42 +147,17 @@ public class EsoWorker
             Console.WriteLine($"[ESO] Compensating step {st.StepName}");
             switch (st.StepName)
             {
-                case "PrepareShipping":
-                    await CancelShipping(sagaId);
-                    break;
-                case "AuthorizePayment":
-                    await CancelPayment(sagaId);
-                    break;
                 case "CreateOrder":
                     await CancelOrder(sagaId);
                     break;
+                case "CreateInventory":
+                    await CancelInventory(sagaId);
+                    break;
             }
-            st.Status = "Compensated";
+            st.Status = "DONE";
             st.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
         }
-    }
-
-    private async Task<bool> CancelShipping(string sagaId)
-    {
-        try
-        {
-            var response = await _httpClient.PostAsync("http://shipping-service/shipping/cancel",
-                new StringContent($"{{\"sagaId\": \"{sagaId}\"}}", Encoding.UTF8, "application/json"));
-            return response.IsSuccessStatusCode;
-        }
-        catch { return false; }
-    }
-
-    private async Task<bool> CancelPayment(string sagaId)
-    {
-        try
-        {
-            var response = await _httpClient.PostAsync("http://payment-service/payment/cancel",
-                new StringContent($"{{\"sagaId\": \"{sagaId}\"}}", Encoding.UTF8, "application/json"));
-            return response.IsSuccessStatusCode;
-        }
-        catch { return false; }
     }
 
     private async Task<bool> CancelOrder(string sagaId)
@@ -210,6 +165,17 @@ public class EsoWorker
         try
         {
             var response = await _httpClient.PostAsync("http://order-service/order/cancel",
+                new StringContent($"{{\"sagaId\": \"{sagaId}\"}}", Encoding.UTF8, "application/json"));
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    private async Task<bool> CancelInventory(string sagaId)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync("http://inventory-service/inventory/cancel",
                 new StringContent($"{{\"sagaId\": \"{sagaId}\"}}", Encoding.UTF8, "application/json"));
             return response.IsSuccessStatusCode;
         }

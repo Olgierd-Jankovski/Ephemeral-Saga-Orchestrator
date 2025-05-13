@@ -1,0 +1,25 @@
+# Dockerfile for GatewayService (placed at repository root)
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy the solution file and projects
+COPY *.sln ./
+COPY ESO/ESO.csproj ESO/
+COPY GatewayService/GatewayService.csproj GatewayService/
+
+# Restore dependencies
+RUN dotnet restore GatewayService/GatewayService.csproj
+
+# Copy all files and build
+COPY . .
+WORKDIR /src/GatewayService
+RUN dotnet publish GatewayService.csproj -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "GatewayService.dll"]
+
+# launch this NOT in service, but one lower level
+# docker build -t gateway-service:1.0 -f GatewayService/Dockerfile .
+# docker run -d -p 30080:80 gateway-service:1.0

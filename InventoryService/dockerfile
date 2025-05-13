@@ -1,15 +1,18 @@
 # Dockerfile (InventoryService)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-WORKDIR /app
-EXPOSE 80
-
+# Dockerfile (InventoryService) – located in InventoryService/dockerfile
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY . .
+
+# Copy the solution and required projects so that Contracts is available
+COPY ECommerceSolution.sln ./
+COPY Contracts/ Contracts/
+COPY InventoryService/ InventoryService/
+
+WORKDIR /src/InventoryService
 RUN dotnet restore InventoryService.csproj
 RUN dotnet publish InventoryService.csproj -c Release -o /app/publish
 
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "InventoryService.dll"]

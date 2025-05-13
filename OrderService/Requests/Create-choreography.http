@@ -1,0 +1,12 @@
+# @host=http://localhost:5063
+
+@host=http://localhost:30080
+
+POST {{host}}/Order/Choreography
+Content-Type: application/json
+
+{
+     "orderName": "Test Item",
+     "sagaId": 2
+}
+

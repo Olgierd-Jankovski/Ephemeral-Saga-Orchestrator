@@ -1,0 +1,6 @@
+# @host=http://localhost:30081
+@host=http://localhost:5186
+
+GET {{host}}/Gateway
+Content-Type: application/json
+

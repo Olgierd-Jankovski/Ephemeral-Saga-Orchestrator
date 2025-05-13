@@ -1,0 +1,9 @@
+@host=http://localhost:30080
+
+POST {{host}}/Order/Cancel
+Content-Type: application/json
+
+{
+     "sagaId": 1
+}
+

@@ -1,0 +1,5 @@
+@host=http://localhost:30081
+# @host=http://localhost:5186
+
+POST {{host}}/Gateway/start
+Content-Type: application/json

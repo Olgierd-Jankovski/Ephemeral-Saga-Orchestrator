@@ -1,7 +1,12 @@
+using Contracts;
 using InventoryService;
 using Microsoft.EntityFrameworkCore;
+using static Contracts.Common;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<IEventBus>(sp => new RabbitMQEventBus("rabbitmq.default.svc.cluster.local"));
+builder.Services.AddScoped<OrderCreatedConsumer>();
+builder.Services.AddScoped<InventoryCreatedConsumer>();
 
 builder.Services.AddControllers();
 
@@ -14,6 +19,12 @@ builder.Services.AddDbContext<InventoryDbContext>(options =>
 // builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+var eventBus = app.Services.GetRequiredService<IEventBus>();
+var consumer = app.Services.GetRequiredService<OrderCreatedConsumer>();
+eventBus.Subscribe<Common.OrderCreatedEvent>(consumer);
+var inventoryConsumer = app.Services.GetRequiredService<InventoryCreatedConsumer>();
+eventBus.Subscribe<InventoryCreatedEvent>(inventoryConsumer);
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();

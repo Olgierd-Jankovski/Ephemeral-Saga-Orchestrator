@@ -23,6 +23,8 @@ spec:
         env:
         - name: ConnectionStrings__Default
           value: "Host=order-db-service;Port=5432;Database=OrderDb;Username=postgres;Password=admin"
+        - name: ConnectionStrings__InventoryDefaultConnection
+          value: "Host=inventory-db-service;Port=5432;Database=InventoryDb;Username=postgres;Password=admin"
         resources:
           requests:
             cpu: "500m"

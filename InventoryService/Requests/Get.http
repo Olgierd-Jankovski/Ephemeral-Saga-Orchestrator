@@ -1,7 +1,7 @@
 # @host=http://localhost:5261
-@host=http://localhost:30080
+@host=http://localhost:30082
 
-GET {{host}}/Order
+GET {{host}}/Inventory
 Content-Type: application/json
 
 # {

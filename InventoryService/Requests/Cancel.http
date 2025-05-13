@@ -1,0 +1,11 @@
+@host=http://localhost:5261
+# @host=http://localhost:30082
+
+POST {{host}}/Inventory
+Content-Type: application/json
+
+{
+     "itemName": "Test Item",
+     "sagaId": 1
+}
+

@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "eso-{0}"
+  labels:
+    app: "eso"
+    sagaId: "{0}"
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 0
+  template:
+    metadata:
+      labels:
+        app: "eso"
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: "eso"
+        image: "eso-orchestrator:1.0"
+        args: ["{0}"]
+        env:
+        - name: ConnectionStrings__EsoDb
+          value: "Host=eso-db-service;Port=5432;Database=EsoDb;Username=postgres;Password=admin"
+        - name: ORDER_SERVICE_URL
+          value: "http://order-service"
+        - name: INVENTORY_SERVICE_URL
+          value: "http://inventory-service"
+        - name: GATEWAY_SERVICE_URL
+          value: "http://gateway-service"
+        resources:
+          requests:
+            cpu: "128m"
+            memory: "64Mi"
+          limits:
+            cpu: "256m"
+            memory: "128Mi"

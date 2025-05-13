@@ -29,6 +29,7 @@ public class InventoryController : ControllerBase
         }
 
         item.CreatedAt = DateTime.UtcNow;
+        item.UpdatedAt = DateTime.UtcNow;
         if (string.IsNullOrEmpty(item.ItemName))
         {
             return BadRequest("Item name cannot be empty");
@@ -38,5 +39,28 @@ public class InventoryController : ControllerBase
         _context.SaveChanges();
 
         return Ok(item);
+    }
+
+
+    // create the cancel endpoint, it accepts the sagaId
+    [HttpPost("Cancel")]
+    public IActionResult CancelItem([FromBody] Item item)
+    {
+        if (item == null)
+        {
+            return BadRequest("Cannot cancel: item cannot be null");
+        }
+
+        var existingItem = _context.Items.FirstOrDefault(i => i.SagaId == item.SagaId);
+        if (existingItem == null)
+        {
+            return NotFound("Cannot cancel: item not found");
+        }
+
+        existingItem.IsCompensated = true;
+        existingItem.UpdatedAt = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        return Ok(existingItem);
     }
 }

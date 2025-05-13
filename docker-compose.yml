@@ -2,32 +2,24 @@ version: "3.9"
 services:
   order-service:
     build:
-      context: ./OrderService
-      dockerfile: dockerfile
+      context: .
+      dockerfile: OrderService/dockerfile
     image: order-service:latest
     ports:
       - "80:80"
   
-  shipping-service:
-    build:
-      context: ./ShippingService
-      dockerfile: dockerfile
-    image: shipping-service:latest
-    ports:
-      - "81:80"
-  
   inventory-service:
     build:
-      context: ./InventoryService
-      dockerfile: dockerfile
+      context: .
+      dockerfile: InventoryService/dockerfile
     image: inventory-service:latest
     ports:
       - "82:80"
-  
-  payment-service:
-    build:
-      context: ./PaymentService
-      dockerfile: dockerfile
-    image: payment-service:latest
-    ports:
-      - "83:80"
+
+  # gateway-service:
+  #   build:
+  #     context: ./GatewayService
+  #     dockerfile: dockerfile
+  #   image: gateway-service:latest
+  #   ports:
+  #     - "30080:80"  

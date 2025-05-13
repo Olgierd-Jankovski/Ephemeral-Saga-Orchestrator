@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-loadtest
+  namespace: default
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: k6
+        image: grafana/k6:latest
+        imagePullPolicy: IfNotPresent
+        command: ["k6", "run", "/scripts/load.js"]
+        # env:
+        # - name: GW_URL
+        #   value: "http://gateway-service.default.svc.cluster.local"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+      volumes:
+      - name: scripts
+        configMap:
+          name: k6-scripts
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-scripts
+  namespace: default
+data:
+  load.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+
+    export let options = {
+      vus: 20,                 // virtualūs vartotojai
+      duration: '1m',          // bendra trukmė
+      thresholds: {            // sėkmės kriterijai
+        http_req_failed: ['rate<0.05'],   // <5 % klaidų
+        http_req_duration: ['p(95)<1000'] // p95 < 1 s
+      }
+    };
+
+    const GATEWAY = __ENV.GW_URL || 'http://gateway-service';
+
+    export default function () {
+      let res = http.post(`${GATEWAY}/gateway/start`);
+      // console.log(`Response status: ${res.status}`);
+      check(res, { 'status 202': r => r.status === 202 });
+      sleep(1);                // imitacija: vartotojas laukia 1 s
+    }
+
