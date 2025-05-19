@@ -38,7 +38,7 @@ kubectl logs -f job/k6-choreo-loadtest
 kubectl apply -f k6-job-neso.yaml
 kubectl logs -f job/k6-neso-loadtest
 
-# Pod‑kill kas 30 s – taikoma TIK ESO Job’ams
+# Pod‑kill kas kelias s – taikoma TIK ESO Job’ams
 kubectl apply -f chaos-kill-eso.yaml
 
 ###
